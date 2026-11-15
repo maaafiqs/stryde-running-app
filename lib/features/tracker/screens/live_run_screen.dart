@@ -5,41 +5,17 @@ import 'package:latlong2/latlong.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/database/database_provider.dart';
+import '../../../core/models/split_pace.dart';
 import '../../../core/services/location_permission_service.dart';
 import '../../../core/services/run_metrics_calculator.dart';
 import '../../../core/theme/stryde_colors.dart';
 import '../../../core/theme/stryde_typography.dart';
 import '../../history/screens/activity_detail_screen.dart';
+import '../../history/widgets/split_pace_table.dart';
 import '../models/tracking_state.dart';
 import '../providers/tracker_notifier.dart';
+import '../../../core/theme/leaflet_map_style.dart';
 import '../widgets/slide_to_finish_button.dart';
-
-enum LeafletMapStyle {
-  openStreetMap(
-    name: 'Leaflet OpenStreetMap',
-    description: 'Peta Leaflet Klasik Terang',
-    urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-    subdomains: ['a', 'b', 'c'],
-  ),
-  darkMatter(
-    name: 'Leaflet Dark Matter',
-    description: 'Peta Leaflet Gelap Kontras Tinggi',
-    urlTemplate: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
-    subdomains: ['a', 'b', 'c', 'd'],
-  );
-
-  final String name;
-  final String description;
-  final String urlTemplate;
-  final List<String> subdomains;
-
-  const LeafletMapStyle({
-    required this.name,
-    required this.description,
-    required this.urlTemplate,
-    required this.subdomains,
-  });
-}
 
 class LiveRunScreen extends ConsumerStatefulWidget {
   const LiveRunScreen({super.key});
@@ -218,6 +194,36 @@ class _LiveRunScreenState extends ConsumerState<LiveRunScreen> {
     final trackingState = ref.watch(trackerProvider);
     final trackerNotifier = ref.read(trackerProvider.notifier);
     final shoesAsync = ref.watch(shoesStreamProvider);
+
+    // Milestone snackbar when a new 1km split is completed
+    ref.listen<int>(
+      trackerProvider.select((s) => s.splits.length),
+      (previous, current) {
+        if (current > 0 && current != previous) {
+          final lastSplit = ref.read(trackerProvider).splits.lastOrNull;
+          if (lastSplit != null) {
+            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Row(
+                  children: [
+                    const Icon(LucideIcons.zap, color: StrydeColors.neonGreen, size: 18),
+                    const SizedBox(width: 8),
+                    Text(
+                      '🎉 Split Km ${lastSplit.km} Selesai! (${lastSplit.formattedPace} /km)',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+                backgroundColor: StrydeColors.surfaceElevated,
+                behavior: SnackBarBehavior.floating,
+                duration: const Duration(seconds: 4),
+              ),
+            );
+          }
+        }
+      },
+    );
 
     // Keep map centered on user when active
     if (_followRunner && trackingState.currentPosition != null) {
@@ -927,6 +933,48 @@ class _LiveRunScreenState extends ConsumerState<LiveRunScreen> {
               ),
             ],
           ),
+
+          // Live Split Pace Pill (if at least 1 split or ongoing tracking)
+          if (state.splits.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            GestureDetector(
+              onTap: () => _showLiveSplitsBottomSheet(context, state),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(
+                  color: (state.isWalking ? const Color(0xFF00E5FF) : StrydeColors.neonGreen)
+                      .withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: (state.isWalking ? const Color(0xFF00E5FF) : StrydeColors.neonGreen)
+                        .withValues(alpha: 0.35),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      LucideIcons.zap,
+                      size: 14,
+                      color: state.isWalking ? const Color(0xFF00E5FF) : StrydeColors.neonGreen,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Split Km ${state.splits.last.km}: ${state.isWalking ? state.splits.last.formattedSpeed : "${state.splits.last.formattedPace} /km"}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        color: state.isWalking ? const Color(0xFF00E5FF) : StrydeColors.neonGreen,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    const Icon(LucideIcons.chevronRight, size: 14, color: StrydeColors.textSecondary),
+                  ],
+                ),
+              ),
+            ),
+          ],
+
           const SizedBox(height: 20),
 
           // Tracking Action Controls
@@ -936,6 +984,50 @@ class _LiveRunScreenState extends ConsumerState<LiveRunScreen> {
             _buildActiveControls(context, state, notifier),
         ],
       ),
+    );
+  }
+
+  void _showLiveSplitsBottomSheet(BuildContext context, TrackingState state) {
+    final completeSplits = SplitPace.completeSplits(
+      existingSplits: state.splits,
+      totalDistanceKm: state.distanceKm,
+      totalMovingTimeSeconds: state.movingTimeSeconds,
+      totalElevationGain: state.elevationGain,
+    );
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+          decoration: const BoxDecoration(
+            color: Color(0xFF0F131C),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+            border: Border(top: BorderSide(color: Colors.white12, width: 1.5)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.white24,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 16),
+              SplitPaceTable(
+                splits: completeSplits,
+                activityType: state.isWalking ? 'walk' : 'run',
+                avgPaceSecondsPerKm: state.averagePaceSeconds,
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 

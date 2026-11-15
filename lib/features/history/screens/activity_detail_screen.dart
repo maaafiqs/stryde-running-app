@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:latlong2/latlong.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:screenshot/screenshot.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../core/database/database_provider.dart';
@@ -14,9 +11,20 @@ import '../../../core/services/run_metrics_calculator.dart';
 import '../../../core/theme/stryde_colors.dart';
 import '../../../core/theme/stryde_typography.dart';
 import '../../../core/utils/gpx_exporter.dart';
+import '../widgets/activity_route_map.dart';
 import '../widgets/elevation_speed_chart.dart';
-import '../widgets/shareable_activity_card.dart';
+import '../widgets/share_activity_modal.dart';
 import '../widgets/split_pace_table.dart';
+
+class _ActivityDetailData {
+  final Activity activity;
+  final List<TrackPoint> trackPoints;
+
+  const _ActivityDetailData({
+    required this.activity,
+    required this.trackPoints,
+  });
+}
 
 class ActivityDetailScreen extends ConsumerStatefulWidget {
   final int activityId;
@@ -28,8 +36,13 @@ class ActivityDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen> {
-  final ScreenshotController _screenshotController = ScreenshotController();
-  final MapController _mapController = MapController();
+
+  Future<_ActivityDetailData?> _loadActivityData(StrydeDatabase db) async {
+    final activity = await db.getActivityById(widget.activityId);
+    if (activity == null) return null;
+    final trackPoints = await db.getTrackPointsForActivity(widget.activityId);
+    return _ActivityDetailData(activity: activity, trackPoints: trackPoints);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -44,204 +57,144 @@ class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen> {
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
-      body: FutureBuilder<Activity?>(
-        future: db.getActivityById(widget.activityId),
+      body: FutureBuilder<_ActivityDetailData?>(
+        future: _loadActivityData(db),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
-              child: CircularProgressIndicator(color: StrydeColors.neonGreen),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(color: StrydeColors.neonGreen),
+                  SizedBox(height: 16),
+                  Text(
+                    'Memuat data aktivitas...',
+                    style: TextStyle(color: StrydeColors.textSecondary, fontSize: 13),
+                  ),
+                ],
+              ),
             );
           }
 
-          final activity = snapshot.data;
-          if (activity == null) {
+          final data = snapshot.data;
+          if (data == null) {
             return const Center(
               child: Text('Activity not found.', style: TextStyle(color: StrydeColors.textSecondary)),
             );
           }
 
-          return FutureBuilder<List<TrackPoint>>(
-            future: db.getTrackPointsForActivity(widget.activityId),
-            builder: (context, pointsSnapshot) {
-              final trackPoints = pointsSnapshot.data ?? [];
-              final splits = SplitPace.listFromJson(activity.splitPacesJson);
+          final activity = data.activity;
+          final trackPoints = data.trackPoints;
+          final rawSplits = SplitPace.listFromJson(activity.splitPacesJson);
+          final splits = SplitPace.completeSplits(
+            existingSplits: rawSplits,
+            totalDistanceKm: activity.distanceKm,
+            totalMovingTimeSeconds: activity.movingTimeSeconds,
+            totalElevationGain: activity.elevationGainMeters,
+          );
 
-              return SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
+          return SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Title, Badge and Date
+                Row(
                   children: [
-                    // Title, Badge and Date
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: activity.activityType == 'walk'
+                            ? const Color(0xFF00E5FF).withValues(alpha: 0.15)
+                            : StrydeColors.neonGreen.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: activity.activityType == 'walk'
+                              ? const Color(0xFF00E5FF)
+                              : StrydeColors.neonGreen,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            activity.activityType == 'walk'
+                                ? LucideIcons.personStanding
+                                : LucideIcons.footprints,
+                            size: 13,
                             color: activity.activityType == 'walk'
-                                ? const Color(0xFF00E5FF).withValues(alpha: 0.15)
-                                : StrydeColors.neonGreen.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
+                                ? const Color(0xFF00E5FF)
+                                : StrydeColors.neonGreen,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            activity.activityType == 'walk' ? 'JALAN SANTAI' : 'LARI',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
                               color: activity.activityType == 'walk'
                                   ? const Color(0xFF00E5FF)
                                   : StrydeColors.neonGreen,
                             ),
                           ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                activity.activityType == 'walk'
-                                    ? LucideIcons.personStanding
-                                    : LucideIcons.footprints,
-                                size: 13,
-                                color: activity.activityType == 'walk'
-                                    ? const Color(0xFF00E5FF)
-                                    : StrydeColors.neonGreen,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                activity.activityType == 'walk' ? 'JALAN SANTAI' : 'LARI',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w800,
-                                  color: activity.activityType == 'walk'
-                                      ? const Color(0xFF00E5FF)
-                                      : StrydeColors.neonGreen,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            activity.title,
-                            style: StrydeTypography.headline,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      DateFormat('EEEE, MMM d, yyyy • h:mm a').format(activity.startTime),
-                      style: StrydeTypography.bodySecondary,
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        activity.title,
+                        style: StrydeTypography.headline,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                    const SizedBox(height: 16),
-
-                    // Interactive Map
-                    _buildRouteMap(trackPoints),
-                    const SizedBox(height: 16),
-
-                    // Action buttons (GPX Export, Share Card)
-                    _buildActionButtons(activity, trackPoints),
-                    const SizedBox(height: 20),
-
-                    // Primary Stats HUD
-                    _buildStatsGrid(activity),
-                    const SizedBox(height: 20),
-
-                    // Elevation & Speed Chart
-                    ElevationSpeedChart(trackPoints: trackPoints),
-                    const SizedBox(height: 20),
-
-                    // 1km Split Pace Table
-                    SplitPaceTable(splits: splits),
                   ],
                 ),
-              );
-            },
+                const SizedBox(height: 4),
+                Text(
+                  DateFormat('EEEE, MMM d, yyyy • h:mm a').format(activity.startTime),
+                  style: StrydeTypography.bodySecondary,
+                ),
+                const SizedBox(height: 16),
+
+                // Interactive Map showing user footprint trail & last location
+                ActivityRouteMap(
+                  activity: activity,
+                  trackPoints: trackPoints,
+                ),
+                const SizedBox(height: 16),
+
+                // Action buttons (GPX Export, Share Card)
+                _buildActionButtons(activity, trackPoints),
+                const SizedBox(height: 20),
+
+                // Primary Stats HUD
+                _buildStatsGrid(activity),
+                const SizedBox(height: 20),
+
+                // Elevation & Speed Chart
+                ElevationSpeedChart(trackPoints: trackPoints),
+                const SizedBox(height: 20),
+
+                // 1km Split Pace Table
+                SplitPaceTable(
+                  splits: splits,
+                  activityType: activity.activityType,
+                  avgPaceSecondsPerKm: activity.avgPaceSecondsPerKm,
+                ),
+              ],
+            ),
           );
         },
       ),
     );
   }
 
-  Widget _buildRouteMap(List<TrackPoint> trackPoints) {
-    final List<LatLng> latLngList = trackPoints.map((p) => LatLng(p.latitude, p.longitude)).toList();
-    final LatLng center = latLngList.isNotEmpty ? latLngList.first : const LatLng(-6.2088, 106.8456);
-
-    return Container(
-      height: 260,
-      decoration: BoxDecoration(
-        color: StrydeColors.surfaceCard,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: StrydeColors.border),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
-        child: FlutterMap(
-          mapController: _mapController,
-          options: MapOptions(
-            initialCenter: center,
-            initialZoom: 15.0,
-            onMapReady: () {
-              if (latLngList.length >= 2) {
-                final bounds = LatLngBounds.fromPoints(latLngList);
-                _mapController.fitCamera(
-                  CameraFit.bounds(
-                    bounds: bounds,
-                    padding: const EdgeInsets.all(32),
-                  ),
-                );
-              }
-            },
-          ),
-          children: [
-            TileLayer(
-              urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-              userAgentPackageName: 'com.stryde.stryde',
-            ),
-            if (latLngList.isNotEmpty)
-              PolylineLayer(
-                polylines: [
-                  Polyline(
-                    points: latLngList,
-                    strokeWidth: 4.5,
-                    color: StrydeColors.neonGreen,
-                  ),
-                ],
-              ),
-            if (latLngList.isNotEmpty)
-              MarkerLayer(
-                markers: [
-                  // Start point marker (Green)
-                  Marker(
-                    point: latLngList.first,
-                    width: 16,
-                    height: 16,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: StrydeColors.neonGreen,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
-                      ),
-                    ),
-                  ),
-                  // Finish point marker (Red)
-                  Marker(
-                    point: latLngList.last,
-                    width: 16,
-                    height: 16,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: StrydeColors.neonRed,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildActionButtons(Activity activity, List<TrackPoint> trackPoints) {
+    final bool isWalking = activity.activityType == 'walk';
+    final Color buttonColor = isWalking ? const Color(0xFF00E5FF) : StrydeColors.neonGreen;
+
     return Row(
       children: [
         // Share Activity Card Button
@@ -251,7 +204,7 @@ class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen> {
             icon: const Icon(LucideIcons.share2, size: 18),
             label: const Text('SHARE CARD'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: StrydeColors.neonGreen,
+              backgroundColor: buttonColor,
               foregroundColor: StrydeColors.textOnNeon,
               padding: const EdgeInsets.symmetric(vertical: 14),
             ),
@@ -380,64 +333,10 @@ class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen> {
   }
 
   void _openShareCardDialog(Activity activity, List<TrackPoint> trackPoints) {
-    showModalBottomSheet(
+    ShareActivityModal.show(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        return Container(
-          padding: const EdgeInsets.all(24),
-          decoration: const BoxDecoration(
-            color: StrydeColors.surfaceSubtle,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: StrydeColors.border,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: 20),
-              const Text(
-                'SHAREABLE STRYDE CARD',
-                style: StrydeTypography.title,
-              ),
-              const SizedBox(height: 20),
-
-              Screenshot(
-                controller: _screenshotController,
-                child: ShareableActivityCard(
-                  activity: activity,
-                  trackPoints: trackPoints,
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              ElevatedButton.icon(
-                onPressed: () async {
-                  Navigator.of(context).pop();
-                  await ShareableActivityCard.captureAndShare(
-                    context: this.context,
-                    screenshotController: _screenshotController,
-                    title: activity.title,
-                  );
-                },
-                icon: const Icon(LucideIcons.share2),
-                label: const Text('SHARE CARD AS IMAGE'),
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size.fromHeight(54),
-                ),
-              ),
-              const SizedBox(height: 12),
-            ],
-          ),
-        );
-      },
+      activity: activity,
+      trackPoints: trackPoints,
     );
   }
 }
