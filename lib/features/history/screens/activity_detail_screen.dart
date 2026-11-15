@@ -72,10 +72,57 @@ class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Title and Date
-                    Text(
-                      activity.title,
-                      style: StrydeTypography.headline,
+                    // Title, Badge and Date
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: activity.activityType == 'walk'
+                                ? const Color(0xFF00E5FF).withValues(alpha: 0.15)
+                                : StrydeColors.neonGreen.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: activity.activityType == 'walk'
+                                  ? const Color(0xFF00E5FF)
+                                  : StrydeColors.neonGreen,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                activity.activityType == 'walk'
+                                    ? LucideIcons.personStanding
+                                    : LucideIcons.footprints,
+                                size: 13,
+                                color: activity.activityType == 'walk'
+                                    ? const Color(0xFF00E5FF)
+                                    : StrydeColors.neonGreen,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                activity.activityType == 'walk' ? 'JALAN SANTAI' : 'LARI',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w800,
+                                  color: activity.activityType == 'walk'
+                                      ? const Color(0xFF00E5FF)
+                                      : StrydeColors.neonGreen,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            activity.title,
+                            style: StrydeTypography.headline,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -144,9 +191,8 @@ class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen> {
           ),
           children: [
             TileLayer(
-              urlTemplate: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
-              subdomains: const ['a', 'b', 'c', 'd'],
-              userAgentPackageName: 'com.stryde.app',
+              urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+              userAgentPackageName: 'com.stryde.stryde',
             ),
             if (latLngList.isNotEmpty)
               PolylineLayer(
@@ -266,7 +312,13 @@ class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildStatCell('AVG PACE', '${RunMetricsCalculator.formatPace(activity.avgPaceSecondsPerKm)} /km'),
+              if (activity.activityType == 'walk')
+                _buildStatCell(
+                  'EST. STEPS',
+                  '${RunMetricsCalculator.estimateSteps(distanceKm: activity.distanceKm, isWalking: true)}',
+                )
+              else
+                _buildStatCell('AVG PACE', '${RunMetricsCalculator.formatPace(activity.avgPaceSecondsPerKm)} /km'),
               _buildStatCell('MOVING TIME', RunMetricsCalculator.formatDuration(activity.movingTimeSeconds)),
               _buildStatCell('CALORIES', '${activity.caloriesBurned.toStringAsFixed(0)} kcal'),
             ],

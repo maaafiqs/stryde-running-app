@@ -496,6 +496,14 @@ class $ActivitiesTable extends Activities
           GeneratedColumn.checkTextLength(minTextLength: 1, maxTextLength: 200),
       type: DriftSqlType.string,
       requiredDuringInsert: true);
+  static const VerificationMeta _activityTypeMeta =
+      const VerificationMeta('activityType');
+  @override
+  late final GeneratedColumn<String> activityType = GeneratedColumn<String>(
+      'activity_type', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('run'));
   static const VerificationMeta _startTimeMeta =
       const VerificationMeta('startTime');
   @override
@@ -606,6 +614,7 @@ class $ActivitiesTable extends Activities
   List<GeneratedColumn> get $columns => [
         id,
         title,
+        activityType,
         startTime,
         endTime,
         distanceKm,
@@ -640,6 +649,12 @@ class $ActivitiesTable extends Activities
           _titleMeta, title.isAcceptableOrUnknown(data['title']!, _titleMeta));
     } else if (isInserting) {
       context.missing(_titleMeta);
+    }
+    if (data.containsKey('activity_type')) {
+      context.handle(
+          _activityTypeMeta,
+          activityType.isAcceptableOrUnknown(
+              data['activity_type']!, _activityTypeMeta));
     }
     if (data.containsKey('start_time')) {
       context.handle(_startTimeMeta,
@@ -748,6 +763,8 @@ class $ActivitiesTable extends Activities
           .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
       title: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}title'])!,
+      activityType: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}activity_type'])!,
       startTime: attachedDatabase.typeMapping
           .read(DriftSqlType.dateTime, data['${effectivePrefix}start_time'])!,
       endTime: attachedDatabase.typeMapping
@@ -793,6 +810,7 @@ class $ActivitiesTable extends Activities
 class Activity extends DataClass implements Insertable<Activity> {
   final int id;
   final String title;
+  final String activityType;
   final DateTime startTime;
   final DateTime endTime;
   final double distanceKm;
@@ -811,6 +829,7 @@ class Activity extends DataClass implements Insertable<Activity> {
   const Activity(
       {required this.id,
       required this.title,
+      required this.activityType,
       required this.startTime,
       required this.endTime,
       required this.distanceKm,
@@ -831,6 +850,7 @@ class Activity extends DataClass implements Insertable<Activity> {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
     map['title'] = Variable<String>(title);
+    map['activity_type'] = Variable<String>(activityType);
     map['start_time'] = Variable<DateTime>(startTime);
     map['end_time'] = Variable<DateTime>(endTime);
     map['distance_km'] = Variable<double>(distanceKm);
@@ -857,6 +877,7 @@ class Activity extends DataClass implements Insertable<Activity> {
     return ActivitiesCompanion(
       id: Value(id),
       title: Value(title),
+      activityType: Value(activityType),
       startTime: Value(startTime),
       endTime: Value(endTime),
       distanceKm: Value(distanceKm),
@@ -884,6 +905,7 @@ class Activity extends DataClass implements Insertable<Activity> {
     return Activity(
       id: serializer.fromJson<int>(json['id']),
       title: serializer.fromJson<String>(json['title']),
+      activityType: serializer.fromJson<String>(json['activityType']),
       startTime: serializer.fromJson<DateTime>(json['startTime']),
       endTime: serializer.fromJson<DateTime>(json['endTime']),
       distanceKm: serializer.fromJson<double>(json['distanceKm']),
@@ -910,6 +932,7 @@ class Activity extends DataClass implements Insertable<Activity> {
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
       'title': serializer.toJson<String>(title),
+      'activityType': serializer.toJson<String>(activityType),
       'startTime': serializer.toJson<DateTime>(startTime),
       'endTime': serializer.toJson<DateTime>(endTime),
       'distanceKm': serializer.toJson<double>(distanceKm),
@@ -931,6 +954,7 @@ class Activity extends DataClass implements Insertable<Activity> {
   Activity copyWith(
           {int? id,
           String? title,
+          String? activityType,
           DateTime? startTime,
           DateTime? endTime,
           double? distanceKm,
@@ -949,6 +973,7 @@ class Activity extends DataClass implements Insertable<Activity> {
       Activity(
         id: id ?? this.id,
         title: title ?? this.title,
+        activityType: activityType ?? this.activityType,
         startTime: startTime ?? this.startTime,
         endTime: endTime ?? this.endTime,
         distanceKm: distanceKm ?? this.distanceKm,
@@ -969,6 +994,9 @@ class Activity extends DataClass implements Insertable<Activity> {
     return Activity(
       id: data.id.present ? data.id.value : this.id,
       title: data.title.present ? data.title.value : this.title,
+      activityType: data.activityType.present
+          ? data.activityType.value
+          : this.activityType,
       startTime: data.startTime.present ? data.startTime.value : this.startTime,
       endTime: data.endTime.present ? data.endTime.value : this.endTime,
       distanceKm:
@@ -1010,6 +1038,7 @@ class Activity extends DataClass implements Insertable<Activity> {
     return (StringBuffer('Activity(')
           ..write('id: $id, ')
           ..write('title: $title, ')
+          ..write('activityType: $activityType, ')
           ..write('startTime: $startTime, ')
           ..write('endTime: $endTime, ')
           ..write('distanceKm: $distanceKm, ')
@@ -1033,6 +1062,7 @@ class Activity extends DataClass implements Insertable<Activity> {
   int get hashCode => Object.hash(
       id,
       title,
+      activityType,
       startTime,
       endTime,
       distanceKm,
@@ -1054,6 +1084,7 @@ class Activity extends DataClass implements Insertable<Activity> {
       (other is Activity &&
           other.id == this.id &&
           other.title == this.title &&
+          other.activityType == this.activityType &&
           other.startTime == this.startTime &&
           other.endTime == this.endTime &&
           other.distanceKm == this.distanceKm &&
@@ -1074,6 +1105,7 @@ class Activity extends DataClass implements Insertable<Activity> {
 class ActivitiesCompanion extends UpdateCompanion<Activity> {
   final Value<int> id;
   final Value<String> title;
+  final Value<String> activityType;
   final Value<DateTime> startTime;
   final Value<DateTime> endTime;
   final Value<double> distanceKm;
@@ -1092,6 +1124,7 @@ class ActivitiesCompanion extends UpdateCompanion<Activity> {
   const ActivitiesCompanion({
     this.id = const Value.absent(),
     this.title = const Value.absent(),
+    this.activityType = const Value.absent(),
     this.startTime = const Value.absent(),
     this.endTime = const Value.absent(),
     this.distanceKm = const Value.absent(),
@@ -1111,6 +1144,7 @@ class ActivitiesCompanion extends UpdateCompanion<Activity> {
   ActivitiesCompanion.insert({
     this.id = const Value.absent(),
     required String title,
+    this.activityType = const Value.absent(),
     required DateTime startTime,
     required DateTime endTime,
     required double distanceKm,
@@ -1136,6 +1170,7 @@ class ActivitiesCompanion extends UpdateCompanion<Activity> {
   static Insertable<Activity> custom({
     Expression<int>? id,
     Expression<String>? title,
+    Expression<String>? activityType,
     Expression<DateTime>? startTime,
     Expression<DateTime>? endTime,
     Expression<double>? distanceKm,
@@ -1155,6 +1190,7 @@ class ActivitiesCompanion extends UpdateCompanion<Activity> {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (title != null) 'title': title,
+      if (activityType != null) 'activity_type': activityType,
       if (startTime != null) 'start_time': startTime,
       if (endTime != null) 'end_time': endTime,
       if (distanceKm != null) 'distance_km': distanceKm,
@@ -1179,6 +1215,7 @@ class ActivitiesCompanion extends UpdateCompanion<Activity> {
   ActivitiesCompanion copyWith(
       {Value<int>? id,
       Value<String>? title,
+      Value<String>? activityType,
       Value<DateTime>? startTime,
       Value<DateTime>? endTime,
       Value<double>? distanceKm,
@@ -1197,6 +1234,7 @@ class ActivitiesCompanion extends UpdateCompanion<Activity> {
     return ActivitiesCompanion(
       id: id ?? this.id,
       title: title ?? this.title,
+      activityType: activityType ?? this.activityType,
       startTime: startTime ?? this.startTime,
       endTime: endTime ?? this.endTime,
       distanceKm: distanceKm ?? this.distanceKm,
@@ -1223,6 +1261,9 @@ class ActivitiesCompanion extends UpdateCompanion<Activity> {
     }
     if (title.present) {
       map['title'] = Variable<String>(title.value);
+    }
+    if (activityType.present) {
+      map['activity_type'] = Variable<String>(activityType.value);
     }
     if (startTime.present) {
       map['start_time'] = Variable<DateTime>(startTime.value);
@@ -1280,6 +1321,7 @@ class ActivitiesCompanion extends UpdateCompanion<Activity> {
     return (StringBuffer('ActivitiesCompanion(')
           ..write('id: $id, ')
           ..write('title: $title, ')
+          ..write('activityType: $activityType, ')
           ..write('startTime: $startTime, ')
           ..write('endTime: $endTime, ')
           ..write('distanceKm: $distanceKm, ')
@@ -1997,6 +2039,7 @@ class $$ShoesTableOrderingComposer
 typedef $$ActivitiesTableCreateCompanionBuilder = ActivitiesCompanion Function({
   Value<int> id,
   required String title,
+  Value<String> activityType,
   required DateTime startTime,
   required DateTime endTime,
   required double distanceKm,
@@ -2016,6 +2059,7 @@ typedef $$ActivitiesTableCreateCompanionBuilder = ActivitiesCompanion Function({
 typedef $$ActivitiesTableUpdateCompanionBuilder = ActivitiesCompanion Function({
   Value<int> id,
   Value<String> title,
+  Value<String> activityType,
   Value<DateTime> startTime,
   Value<DateTime> endTime,
   Value<double> distanceKm,
@@ -2052,6 +2096,7 @@ class $$ActivitiesTableTableManager extends RootTableManager<
           updateCompanionCallback: ({
             Value<int> id = const Value.absent(),
             Value<String> title = const Value.absent(),
+            Value<String> activityType = const Value.absent(),
             Value<DateTime> startTime = const Value.absent(),
             Value<DateTime> endTime = const Value.absent(),
             Value<double> distanceKm = const Value.absent(),
@@ -2071,6 +2116,7 @@ class $$ActivitiesTableTableManager extends RootTableManager<
               ActivitiesCompanion(
             id: id,
             title: title,
+            activityType: activityType,
             startTime: startTime,
             endTime: endTime,
             distanceKm: distanceKm,
@@ -2090,6 +2136,7 @@ class $$ActivitiesTableTableManager extends RootTableManager<
           createCompanionCallback: ({
             Value<int> id = const Value.absent(),
             required String title,
+            Value<String> activityType = const Value.absent(),
             required DateTime startTime,
             required DateTime endTime,
             required double distanceKm,
@@ -2109,6 +2156,7 @@ class $$ActivitiesTableTableManager extends RootTableManager<
               ActivitiesCompanion.insert(
             id: id,
             title: title,
+            activityType: activityType,
             startTime: startTime,
             endTime: endTime,
             distanceKm: distanceKm,
@@ -2138,6 +2186,11 @@ class $$ActivitiesTableFilterComposer
 
   ColumnFilters<String> get title => $state.composableBuilder(
       column: $state.table.title,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get activityType => $state.composableBuilder(
+      column: $state.table.activityType,
       builder: (column, joinBuilders) =>
           ColumnFilters(column, joinBuilders: joinBuilders));
 
@@ -2247,6 +2300,11 @@ class $$ActivitiesTableOrderingComposer
 
   ColumnOrderings<String> get title => $state.composableBuilder(
       column: $state.table.title,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get activityType => $state.composableBuilder(
+      column: $state.table.activityType,
       builder: (column, joinBuilders) =>
           ColumnOrderings(column, joinBuilders: joinBuilders));
 

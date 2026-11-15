@@ -65,7 +65,7 @@ class RunMetricsCalculator {
 
   /// Calculates average pace given moving time (seconds) and distance (km).
   static double calculateAveragePaceSecondsPerKm(int movingTimeSeconds, double distanceKm) {
-    if (distanceKm <= 0.05 || movingTimeSeconds <= 0) {
+    if (distanceKm < 0.05 || movingTimeSeconds <= 0) {
       return 0.0;
     }
     return movingTimeSeconds / distanceKm;
@@ -76,10 +76,24 @@ class RunMetricsCalculator {
     return speedMps * 3.6;
   }
 
-  /// Estimates calories burned (assuming standard runner weight of 68kg, MET ~ 1.036 kcal/kg/km).
-  static double calculateCalories({required double distanceKm, double runnerWeightKg = 68.0}) {
+  /// Estimates calories burned (assuming standard weight of 68kg, MET ~ 1.036 for run, ~0.72 for walk).
+  static double calculateCalories({
+    required double distanceKm,
+    double runnerWeightKg = 68.0,
+    bool isWalking = false,
+  }) {
     if (distanceKm <= 0) return 0.0;
-    return distanceKm * runnerWeightKg * 1.036;
+    final double factor = isWalking ? 0.72 : 1.036;
+    return distanceKm * runnerWeightKg * factor;
+  }
+
+  /// Estimates steps based on distance and activity type.
+  /// Walking: ~1,350 steps/km (average stride length ~0.74m)
+  /// Running: ~1,050 steps/km (average stride length ~0.95m)
+  static int estimateSteps({required double distanceKm, required bool isWalking}) {
+    if (distanceKm <= 0) return 0;
+    final double stepsPerKm = isWalking ? 1350.0 : 1050.0;
+    return (distanceKm * stepsPerKm).round();
   }
 
   /// Checks if a new split kilometer milestone has been reached.

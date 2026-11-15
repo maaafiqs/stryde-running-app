@@ -164,7 +164,13 @@ class ShareableActivityCard extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildStat('AVG PACE', '${RunMetricsCalculator.formatPace(activity.avgPaceSecondsPerKm)} /km'),
+                if (activity.activityType == 'walk')
+                  _buildStat(
+                    'EST. STEPS',
+                    '${RunMetricsCalculator.estimateSteps(distanceKm: activity.distanceKm, isWalking: true)}',
+                  )
+                else
+                  _buildStat('AVG PACE', '${RunMetricsCalculator.formatPace(activity.avgPaceSecondsPerKm)} /km'),
                 _buildStat('TIME', RunMetricsCalculator.formatDuration(activity.movingTimeSeconds)),
                 _buildStat('CALORIES', '${activity.caloriesBurned.toStringAsFixed(0)} kcal'),
               ],

@@ -4,6 +4,7 @@ import 'shoes.dart';
 class Activities extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get title => text().withLength(min: 1, max: 200)();
+  TextColumn get activityType => text().withDefault(const Constant('run'))();
   DateTimeColumn get startTime => dateTime()();
   DateTimeColumn get endTime => dateTime()();
   RealColumn get distanceKm => real()();

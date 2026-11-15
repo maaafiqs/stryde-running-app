@@ -146,11 +146,54 @@ class HistoryScreen extends ConsumerWidget {
             children: [
               Row(
                 children: [
-                  Text(
-                    activity.title,
-                    style: StrydeTypography.metricSmall.copyWith(fontSize: 16),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: activity.activityType == 'walk'
+                          ? const Color(0xFF00E5FF).withValues(alpha: 0.15)
+                          : StrydeColors.neonGreen.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: activity.activityType == 'walk'
+                            ? const Color(0xFF00E5FF)
+                            : StrydeColors.neonGreen,
+                        width: 0.8,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          activity.activityType == 'walk'
+                              ? LucideIcons.personStanding
+                              : LucideIcons.footprints,
+                          size: 11,
+                          color: activity.activityType == 'walk'
+                              ? const Color(0xFF00E5FF)
+                              : StrydeColors.neonGreen,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          activity.activityType == 'walk' ? 'JALAN' : 'LARI',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            color: activity.activityType == 'walk'
+                                ? const Color(0xFF00E5FF)
+                                : StrydeColors.neonGreen,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  const Spacer(),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      activity.title,
+                      style: StrydeTypography.metricSmall.copyWith(fontSize: 15),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                   Text(
                     dateFormat.format(activity.startTime),
                     style: StrydeTypography.caption,

@@ -2,6 +2,7 @@ import 'package:drift/drift.dart' as drift;
 import 'package:latlong2/latlong.dart';
 import '../../../core/database/stryde_database.dart';
 import '../../../core/models/split_pace.dart';
+import '../../../core/services/run_metrics_calculator.dart';
 
 enum TrackingStatus {
   idle,
@@ -10,8 +11,14 @@ enum TrackingStatus {
   finished,
 }
 
+enum StrydeActivityType {
+  run,
+  walk,
+}
+
 class TrackingState {
   final TrackingStatus status;
+  final StrydeActivityType activityType;
   final double distanceKm;
   final int durationSeconds;
   final int movingTimeSeconds;
@@ -33,6 +40,7 @@ class TrackingState {
 
   const TrackingState({
     this.status = TrackingStatus.idle,
+    this.activityType = StrydeActivityType.run,
     this.distanceKm = 0.0,
     this.durationSeconds = 0,
     this.movingTimeSeconds = 0,
@@ -47,7 +55,7 @@ class TrackingState {
     this.trackPoints = const [],
     this.currentPosition,
     this.currentAltitude = 0.0,
-    this.autoPauseEnabled = true,
+    this.autoPauseEnabled = false,
     this.isAutoPaused = false,
     this.activeShoeId,
     this.startTime,
@@ -55,9 +63,13 @@ class TrackingState {
 
   bool get isActive => status == TrackingStatus.running || status == TrackingStatus.paused;
   bool get isRunning => status == TrackingStatus.running && !isAutoPaused;
+  bool get isWalking => activityType == StrydeActivityType.walk;
+  int get estimatedSteps =>
+      RunMetricsCalculator.estimateSteps(distanceKm: distanceKm, isWalking: isWalking);
 
   TrackingState copyWith({
     TrackingStatus? status,
+    StrydeActivityType? activityType,
     double? distanceKm,
     int? durationSeconds,
     int? movingTimeSeconds,
@@ -79,6 +91,7 @@ class TrackingState {
   }) {
     return TrackingState(
       status: status ?? this.status,
+      activityType: activityType ?? this.activityType,
       distanceKm: distanceKm ?? this.distanceKm,
       durationSeconds: durationSeconds ?? this.durationSeconds,
       movingTimeSeconds: movingTimeSeconds ?? this.movingTimeSeconds,
