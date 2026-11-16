@@ -10,17 +10,20 @@ import 'shareable_activity_card.dart';
 class ShareActivityModal extends StatefulWidget {
   final Activity activity;
   final List<TrackPoint> trackPoints;
+  final Shoe? shoe;
 
   const ShareActivityModal({
     super.key,
     required this.activity,
     required this.trackPoints,
+    this.shoe,
   });
 
   static Future<void> show({
     required BuildContext context,
     required Activity activity,
     required List<TrackPoint> trackPoints,
+    Shoe? shoe,
   }) {
     return showModalBottomSheet(
       context: context,
@@ -29,6 +32,7 @@ class ShareActivityModal extends StatefulWidget {
       builder: (context) => ShareActivityModal(
         activity: activity,
         trackPoints: trackPoints,
+        shoe: shoe,
       ),
     );
   }
@@ -195,6 +199,7 @@ class _ShareActivityModalState extends State<ShareActivityModal> {
                             child: ShareableActivityCard(
                               activity: widget.activity,
                               trackPoints: widget.trackPoints,
+                              shoe: widget.shoe,
                               backgroundStyle: _backgroundStyle,
                               showRoute: _showRoute,
                               format: _format,

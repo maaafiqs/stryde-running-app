@@ -5,6 +5,7 @@ import '../../core/theme/stryde_colors.dart';
 import '../analytics/screens/analytics_screen.dart';
 import '../gear/screens/gear_screen.dart';
 import '../history/screens/history_screen.dart';
+import '../settings/screens/settings_screen.dart';
 import '../tracker/screens/live_run_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
@@ -22,21 +23,28 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     HistoryScreen(),
     AnalyticsScreen(),
     GearScreen(),
+    SettingsScreen(),
   ];
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final navBg = isDark ? StrydeColors.surfaceCard : Colors.white;
+    final navBorder = isDark ? StrydeColors.border : const Color(0xFFE2E8F0);
+    final activeColor = isDark ? StrydeColors.neonGreen : const Color(0xFF00C853);
+    final inactiveColor = isDark ? StrydeColors.textSecondary : const Color(0xFF64748B);
+
     return Scaffold(
-      backgroundColor: StrydeColors.background,
+      backgroundColor: isDark ? StrydeColors.background : const Color(0xFFF6F8FA),
       body: IndexedStack(
         index: _currentIndex,
         children: _screens,
       ),
       bottomNavigationBar: Container(
-        decoration: const BoxDecoration(
-          color: StrydeColors.surfaceCard,
+        decoration: BoxDecoration(
+          color: navBg,
           border: Border(
-            top: BorderSide(color: StrydeColors.border, width: 1.0),
+            top: BorderSide(color: navBorder, width: 1.0),
           ),
         ),
         child: BottomNavigationBar(
@@ -46,33 +54,38 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               _currentIndex = index;
             });
           },
-          backgroundColor: StrydeColors.surfaceCard,
-          selectedItemColor: StrydeColors.neonGreen,
-          unselectedItemColor: StrydeColors.textSecondary,
-          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 11),
-          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 11),
+          backgroundColor: navBg,
+          selectedItemColor: activeColor,
+          unselectedItemColor: inactiveColor,
+          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 10),
+          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 10),
           type: BottomNavigationBarType.fixed,
           elevation: 0,
-          items: const [
+          items: [
             BottomNavigationBarItem(
-              icon: Icon(LucideIcons.playCircle),
-              activeIcon: Icon(LucideIcons.playCircle, color: StrydeColors.neonGreen),
+              icon: const Icon(LucideIcons.playCircle),
+              activeIcon: Icon(LucideIcons.playCircle, color: activeColor),
               label: 'TRACK',
             ),
             BottomNavigationBarItem(
-              icon: Icon(LucideIcons.history),
-              activeIcon: Icon(LucideIcons.history, color: StrydeColors.neonGreen),
+              icon: const Icon(LucideIcons.history),
+              activeIcon: Icon(LucideIcons.history, color: activeColor),
               label: 'HISTORY',
             ),
             BottomNavigationBarItem(
-              icon: Icon(LucideIcons.barChart2),
-              activeIcon: Icon(LucideIcons.barChart2, color: StrydeColors.neonGreen),
+              icon: const Icon(LucideIcons.barChart2),
+              activeIcon: Icon(LucideIcons.barChart2, color: activeColor),
               label: 'ANALYTICS',
             ),
             BottomNavigationBarItem(
-              icon: Icon(LucideIcons.archive),
-              activeIcon: Icon(LucideIcons.archive, color: StrydeColors.neonGreen),
+              icon: const Icon(LucideIcons.footprints),
+              activeIcon: Icon(LucideIcons.footprints, color: activeColor),
               label: 'GEAR',
+            ),
+            BottomNavigationBarItem(
+              icon: const Icon(LucideIcons.settings),
+              activeIcon: Icon(LucideIcons.settings, color: activeColor),
+              label: 'SETTING',
             ),
           ],
         ),

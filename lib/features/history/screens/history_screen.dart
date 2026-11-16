@@ -16,7 +16,12 @@ class HistoryScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final activitiesAsync = ref.watch(activitiesStreamProvider);
+    final shoesAsync = ref.watch(shoesStreamProvider);
     final db = ref.watch(databaseProvider);
+
+    final shoesMap = shoesAsync.value != null
+        ? {for (final s in shoesAsync.value!) s.id: '${s.brand} ${s.model}'}
+        : <int, String>{};
 
     return Scaffold(
       backgroundColor: StrydeColors.background,
@@ -36,7 +41,7 @@ class HistoryScreen extends ConsumerWidget {
             separatorBuilder: (_, _) => const SizedBox(height: 12),
             itemBuilder: (context, index) {
               final activity = activities[index];
-              return _buildActivityCard(context, db, activity);
+              return _buildActivityCard(context, db, activity, shoesMap);
             },
           );
         },
@@ -87,7 +92,12 @@ class HistoryScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildActivityCard(BuildContext context, StrydeDatabase db, Activity activity) {
+  Widget _buildActivityCard(
+    BuildContext context,
+    StrydeDatabase db,
+    Activity activity,
+    Map<int, String> shoesMap,
+  ) {
     final dateFormat = DateFormat('EEE, MMM d • h:mm a');
 
     return Dismissible(
@@ -261,13 +271,29 @@ class HistoryScreen extends ConsumerWidget {
                     '${activity.caloriesBurned.toStringAsFixed(0)} kcal',
                     style: StrydeTypography.caption,
                   ),
-                  const SizedBox(width: 14),
+                  const SizedBox(width: 12),
                   const Icon(LucideIcons.mountain, size: 14, color: StrydeColors.textSecondary),
                   const SizedBox(width: 4),
                   Text(
                     '+${activity.elevationGainMeters.toStringAsFixed(0)} m',
                     style: StrydeTypography.caption,
                   ),
+                  if (activity.shoeId != null && shoesMap.containsKey(activity.shoeId!)) ...[
+                    const SizedBox(width: 12),
+                    const Icon(LucideIcons.footprints, size: 13, color: StrydeColors.neonGreen),
+                    const SizedBox(width: 4),
+                    Flexible(
+                      child: Text(
+                        shoesMap[activity.shoeId!]!,
+                        style: StrydeTypography.caption.copyWith(
+                          color: StrydeColors.neonGreen,
+                          fontWeight: FontWeight.w700,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                   const Spacer(),
                   const Icon(LucideIcons.chevronRight, size: 18, color: StrydeColors.textMuted),
                 ],

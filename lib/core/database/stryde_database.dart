@@ -110,6 +110,10 @@ class StrydeDatabase extends _$StrydeDatabase {
         .getSingleOrNull();
   }
 
+  Future<Shoe?> getShoeById(int id) {
+    return (select(shoes)..where((t) => t.id.equals(id))).getSingleOrNull();
+  }
+
   Future<int> insertShoe(ShoesCompanion shoe) {
     return into(shoes).insert(shoe);
   }

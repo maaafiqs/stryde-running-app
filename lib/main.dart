@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/services/background_service_manager.dart';
 import 'core/theme/stryde_theme.dart';
+import 'core/theme/theme_provider.dart';
 import 'features/home/main_navigation_screen.dart';
 
 Future<void> main() async {
@@ -33,15 +34,19 @@ Future<void> main() async {
   );
 }
 
-class StrydeApp extends StatelessWidget {
+class StrydeApp extends ConsumerWidget {
   const StrydeApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeMode = ref.watch(themeModeProvider);
+
     return MaterialApp(
       title: 'Stryde',
       debugShowCheckedModeBanner: false,
-      theme: StrydeTheme.darkTheme,
+      theme: StrydeTheme.lightTheme,
+      darkTheme: StrydeTheme.darkTheme,
+      themeMode: themeMode,
       home: const MainNavigationScreen(),
     );
   }

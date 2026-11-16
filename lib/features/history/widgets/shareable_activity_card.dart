@@ -32,10 +32,7 @@ enum ShareBackgroundStyle {
   final String label;
   final String description;
 
-  const ShareBackgroundStyle({
-    required this.label,
-    required this.description,
-  });
+  const ShareBackgroundStyle({required this.label, required this.description});
 }
 
 enum ShareCardFormat {
@@ -57,6 +54,7 @@ enum ShareCardFormat {
 class ShareableActivityCard extends StatelessWidget {
   final Activity activity;
   final List<TrackPoint> trackPoints;
+  final Shoe? shoe;
   final ShareBackgroundStyle backgroundStyle;
   final bool showRoute;
   final ShareCardFormat format;
@@ -65,6 +63,7 @@ class ShareableActivityCard extends StatelessWidget {
     super.key,
     required this.activity,
     required this.trackPoints,
+    this.shoe,
     this.backgroundStyle = ShareBackgroundStyle.carbonDark,
     this.showRoute = true,
     this.format = ShareCardFormat.card,
@@ -84,7 +83,8 @@ class ShareableActivityCard extends StatelessWidget {
         final directory = await getTemporaryDirectory();
         final timestamp = DateTime.now().millisecondsSinceEpoch;
         final sanitizedTitle = title.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_');
-        final imagePath = '${directory.path}/stryde_${sanitizedTitle}_$timestamp.png';
+        final imagePath =
+            '${directory.path}/stryde_${sanitizedTitle}_$timestamp.png';
         final imageFile = File(imagePath);
         await imageFile.writeAsBytes(imageBytes);
         return imagePath;
@@ -115,17 +115,18 @@ class ShareableActivityCard extends StatelessWidget {
     );
 
     if (imagePath != null && context.mounted) {
-      await Share.shareXFiles(
-        [XFile(imagePath)],
-        text: 'Lihat aktivitas saya di Stryde! 🏃⚡ $title ${subtitle ?? ""}',
-      );
+      await Share.shareXFiles([
+        XFile(imagePath),
+      ], text: 'Lihat aktivitas saya di Stryde! 🏃⚡ $title ${subtitle ?? ""}');
     }
   }
 
-  bool get _isTransparent => backgroundStyle == ShareBackgroundStyle.transparent;
+  bool get _isTransparent =>
+      backgroundStyle == ShareBackgroundStyle.transparent;
   bool get _isLight => backgroundStyle == ShareBackgroundStyle.minimalLight;
   bool get _isWalking => activity.activityType == 'walk';
-  Color get _activityColor => _isWalking ? const Color(0xFF00E5FF) : StrydeColors.neonGreen;
+  Color get _activityColor =>
+      _isWalking ? const Color(0xFF00E5FF) : StrydeColors.neonGreen;
 
   Color get _primaryTextColor {
     if (_isLight) return const Color(0xFF0F172A);
@@ -165,10 +166,7 @@ class ShareableActivityCard extends StatelessWidget {
         return BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(28),
-          border: Border.all(
-            color: const Color(0xFFE2E8F0),
-            width: 1.5,
-          ),
+          border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.08),
@@ -261,7 +259,10 @@ class ShareableActivityCard extends StatelessWidget {
 
                   // Activity Badge Pill (Lari / Jalan Santai)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: _activityColor.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(8),
@@ -271,7 +272,9 @@ class ShareableActivityCard extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
-                          _isWalking ? LucideIcons.personStanding : LucideIcons.footprints,
+                          _isWalking
+                              ? LucideIcons.personStanding
+                              : LucideIcons.footprints,
                           size: 11,
                           color: _activityColor,
                         ),
@@ -300,6 +303,25 @@ class ShareableActivityCard extends StatelessWidget {
                   shadows: _textShadows,
                 ),
               ),
+              if (shoe != null) ...[
+                const SizedBox(height: 4),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(LucideIcons.footprints, size: 10, color: _activityColor),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${shoe!.brand} ${shoe!.model}',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: _secondaryTextColor,
+                        shadows: _textShadows,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ],
           ),
 
@@ -311,21 +333,21 @@ class ShareableActivityCard extends StatelessWidget {
               height: format == ShareCardFormat.story
                   ? 220
                   : format == ShareCardFormat.square
-                      ? 120
-                      : 150,
+                  ? 120
+                  : 150,
               decoration: BoxDecoration(
                 color: _isTransparent
                     ? Colors.transparent
                     : _isLight
-                        ? const Color(0xFFF1F5F9)
-                        : StrydeColors.background,
+                    ? const Color(0xFFF1F5F9)
+                    : StrydeColors.background,
                 borderRadius: BorderRadius.circular(18),
                 border: Border.all(
                   color: _isTransparent
                       ? Colors.white12
                       : _isLight
-                          ? const Color(0xFFE2E8F0)
-                          : StrydeColors.border,
+                      ? const Color(0xFFE2E8F0)
+                      : StrydeColors.border,
                 ),
               ),
               child: ClipRRect(
@@ -340,8 +362,8 @@ class ShareableActivityCard extends StatelessWidget {
                     format == ShareCardFormat.story
                         ? 220
                         : format == ShareCardFormat.square
-                            ? 120
-                            : 150,
+                        ? 120
+                        : 150,
                   ),
                 ),
               ),
@@ -403,15 +425,15 @@ class ShareableActivityCard extends StatelessWidget {
               color: _isTransparent
                   ? Colors.black.withValues(alpha: 0.35)
                   : _isLight
-                      ? const Color(0xFFF8FAFC)
-                      : StrydeColors.surfaceElevated,
+                  ? const Color(0xFFF8FAFC)
+                  : StrydeColors.surfaceElevated,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
                 color: _isTransparent
                     ? Colors.white12
                     : _isLight
-                        ? const Color(0xFFE2E8F0)
-                        : Colors.white10,
+                    ? const Color(0xFFE2E8F0)
+                    : Colors.white10,
               ),
             ),
             child: Row(
@@ -429,7 +451,9 @@ class ShareableActivityCard extends StatelessWidget {
                 // Moving Time
                 _buildStatItem(
                   label: 'TIME',
-                  value: RunMetricsCalculator.formatDuration(activity.movingTimeSeconds),
+                  value: RunMetricsCalculator.formatDuration(
+                    activity.movingTimeSeconds,
+                  ),
                   icon: LucideIcons.clock,
                 ),
 
@@ -444,13 +468,15 @@ class ShareableActivityCard extends StatelessWidget {
                 if (_isWalking)
                   _buildStatItem(
                     label: 'EST. STEPS',
-                    value: '${RunMetricsCalculator.estimateSteps(distanceKm: activity.distanceKm, isWalking: true)}',
+                    value:
+                        '${RunMetricsCalculator.estimateSteps(distanceKm: activity.distanceKm, isWalking: true)}',
                     icon: LucideIcons.personStanding,
                   )
                 else
                   _buildStatItem(
                     label: 'ELEV GAIN',
-                    value: '+${activity.elevationGainMeters.toStringAsFixed(0)}m',
+                    value:
+                        '+${activity.elevationGainMeters.toStringAsFixed(0)}m',
                     icon: LucideIcons.mountain,
                   ),
               ],
@@ -525,10 +551,7 @@ class RouteVectorPainter extends CustomPainter {
   final List<TrackPoint> trackPoints;
   final String activityType;
 
-  RouteVectorPainter({
-    required this.trackPoints,
-    this.activityType = 'run',
-  });
+  RouteVectorPainter({required this.trackPoints, this.activityType = 'run'});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -558,9 +581,11 @@ class RouteVectorPainter extends CustomPainter {
     final path = Path();
     for (int i = 0; i < trackPoints.length; i++) {
       final p = trackPoints[i];
-      final double x = padding + ((p.longitude - minLon) / lonRange) * drawWidth;
+      final double x =
+          padding + ((p.longitude - minLon) / lonRange) * drawWidth;
       // Invert Y because latitude goes north while canvas Y goes down
-      final double y = padding + (1.0 - ((p.latitude - minLat) / latRange)) * drawHeight;
+      final double y =
+          padding + (1.0 - ((p.latitude - minLat) / latRange)) * drawHeight;
 
       if (i == 0) {
         path.moveTo(x, y);
@@ -594,21 +619,40 @@ class RouteVectorPainter extends CustomPainter {
 
     // Draw Start point (Green)
     final firstPoint = trackPoints.first;
-    final double startX = padding + ((firstPoint.longitude - minLon) / lonRange) * drawWidth;
-    final double startY = padding + (1.0 - ((firstPoint.latitude - minLat) / latRange)) * drawHeight;
-    canvas.drawCircle(Offset(startX, startY), 4.5, Paint()..color = StrydeColors.neonGreen);
-    canvas.drawCircle(Offset(startX, startY), 2.0, Paint()..color = Colors.white);
+    final double startX =
+        padding + ((firstPoint.longitude - minLon) / lonRange) * drawWidth;
+    final double startY =
+        padding +
+        (1.0 - ((firstPoint.latitude - minLat) / latRange)) * drawHeight;
+    canvas.drawCircle(
+      Offset(startX, startY),
+      4.5,
+      Paint()..color = StrydeColors.neonGreen,
+    );
+    canvas.drawCircle(
+      Offset(startX, startY),
+      2.0,
+      Paint()..color = Colors.white,
+    );
 
     // Draw Finish point (Red)
     final lastPoint = trackPoints.last;
-    final double endX = padding + ((lastPoint.longitude - minLon) / lonRange) * drawWidth;
-    final double endY = padding + (1.0 - ((lastPoint.latitude - minLat) / latRange)) * drawHeight;
-    canvas.drawCircle(Offset(endX, endY), 5.0, Paint()..color = StrydeColors.neonRed);
+    final double endX =
+        padding + ((lastPoint.longitude - minLon) / lonRange) * drawWidth;
+    final double endY =
+        padding +
+        (1.0 - ((lastPoint.latitude - minLat) / latRange)) * drawHeight;
+    canvas.drawCircle(
+      Offset(endX, endY),
+      5.0,
+      Paint()..color = StrydeColors.neonRed,
+    );
     canvas.drawCircle(Offset(endX, endY), 2.2, Paint()..color = Colors.white);
   }
 
   @override
   bool shouldRepaint(covariant RouteVectorPainter oldDelegate) {
-    return oldDelegate.trackPoints != trackPoints || oldDelegate.activityType != activityType;
+    return oldDelegate.trackPoints != trackPoints ||
+        oldDelegate.activityType != activityType;
   }
 }

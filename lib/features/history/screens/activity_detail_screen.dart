@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:share_plus/share_plus.dart';
 
 import '../../../core/database/database_provider.dart';
 import '../../../core/database/stryde_database.dart';
@@ -10,7 +9,6 @@ import '../../../core/models/split_pace.dart';
 import '../../../core/services/run_metrics_calculator.dart';
 import '../../../core/theme/stryde_colors.dart';
 import '../../../core/theme/stryde_typography.dart';
-import '../../../core/utils/gpx_exporter.dart';
 import '../widgets/activity_route_map.dart';
 import '../widgets/elevation_speed_chart.dart';
 import '../widgets/share_activity_modal.dart';
@@ -19,10 +17,12 @@ import '../widgets/split_pace_table.dart';
 class _ActivityDetailData {
   final Activity activity;
   final List<TrackPoint> trackPoints;
+  final Shoe? shoe;
 
   const _ActivityDetailData({
     required this.activity,
     required this.trackPoints,
+    this.shoe,
   });
 }
 
@@ -41,7 +41,11 @@ class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen> {
     final activity = await db.getActivityById(widget.activityId);
     if (activity == null) return null;
     final trackPoints = await db.getTrackPointsForActivity(widget.activityId);
-    return _ActivityDetailData(activity: activity, trackPoints: trackPoints);
+    Shoe? shoe;
+    if (activity.shoeId != null) {
+      shoe = await db.getShoeById(activity.shoeId!);
+    }
+    return _ActivityDetailData(activity: activity, trackPoints: trackPoints, shoe: shoe);
   }
 
   @override
@@ -156,7 +160,13 @@ class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen> {
                   DateFormat('EEEE, MMM d, yyyy • h:mm a').format(activity.startTime),
                   style: StrydeTypography.bodySecondary,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
+
+                // Shoe info card (if a shoe was selected for this session)
+                if (data.shoe != null) ...[
+                  _buildShoeCard(activity, data.shoe!),
+                  const SizedBox(height: 12),
+                ],
 
                 // Interactive Map showing user footprint trail & last location
                 ActivityRouteMap(
@@ -165,8 +175,8 @@ class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // Action buttons (GPX Export, Share Card)
-                _buildActionButtons(activity, trackPoints),
+                // Action button (Share Card)
+                _buildActionButtons(activity, trackPoints, data.shoe),
                 const SizedBox(height: 20),
 
                 // Primary Stats HUD
@@ -191,39 +201,104 @@ class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen> {
     );
   }
 
-  Widget _buildActionButtons(Activity activity, List<TrackPoint> trackPoints) {
+  Widget _buildShoeCard(Activity activity, Shoe shoe) {
+    final bool isWalking = activity.activityType == 'walk';
+    final Color accentColor = isWalking ? const Color(0xFF00E5FF) : StrydeColors.neonGreen;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: StrydeColors.surfaceCard,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: StrydeColors.border),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: accentColor.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              LucideIcons.footprints,
+              size: 16,
+              color: accentColor,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'SEPATU DIGUNAKAN',
+                  style: TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.w800,
+                    color: StrydeColors.textSecondary,
+                    letterSpacing: 0.8,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '${shoe.brand} ${shoe.model}',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: StrydeColors.textPrimary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                '${shoe.totalDistanceKm.toStringAsFixed(1)} KM',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w900,
+                  color: accentColor,
+                ),
+              ),
+              const SizedBox(height: 1),
+              const Text(
+                'Total Jarak',
+                style: TextStyle(
+                  fontSize: 9,
+                  fontWeight: FontWeight.w600,
+                  color: StrydeColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionButtons(Activity activity, List<TrackPoint> trackPoints, Shoe? shoe) {
     final bool isWalking = activity.activityType == 'walk';
     final Color buttonColor = isWalking ? const Color(0xFF00E5FF) : StrydeColors.neonGreen;
 
-    return Row(
-      children: [
-        // Share Activity Card Button
-        Expanded(
-          child: ElevatedButton.icon(
-            onPressed: () => _openShareCardDialog(activity, trackPoints),
-            icon: const Icon(LucideIcons.share2, size: 18),
-            label: const Text('SHARE CARD'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: buttonColor,
-              foregroundColor: StrydeColors.textOnNeon,
-              padding: const EdgeInsets.symmetric(vertical: 14),
-            ),
-          ),
+    return ElevatedButton.icon(
+      onPressed: () => _openShareCardDialog(activity, trackPoints, shoe),
+      icon: const Icon(LucideIcons.share2, size: 18),
+      label: const Text(
+        'BAGIKAN HASIL (SHARE CARD)',
+        style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 0.5),
+      ),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: buttonColor,
+        foregroundColor: StrydeColors.textOnNeon,
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        minimumSize: const Size.fromHeight(52),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
         ),
-        const SizedBox(width: 12),
-
-        // Export GPX Button
-        Expanded(
-          child: OutlinedButton.icon(
-            onPressed: () => _exportGpxFile(activity, trackPoints),
-            icon: const Icon(LucideIcons.fileText, size: 18),
-            label: const Text('EXPORT GPX'),
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 14),
-            ),
-          ),
-        ),
-      ],
+      ),
     );
   }
 
@@ -309,34 +384,12 @@ class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen> {
     );
   }
 
-  Future<void> _exportGpxFile(Activity activity, List<TrackPoint> trackPoints) async {
-    try {
-      final gpxFile = await GpxExporter.exportToGpx(
-        activity: activity,
-        trackPoints: trackPoints,
-      );
-
-      await Share.shareXFiles(
-        [XFile(gpxFile.path)],
-        text: '${activity.title} GPX Track',
-      );
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to export GPX: $e'),
-            backgroundColor: StrydeColors.dangerRed,
-          ),
-        );
-      }
-    }
-  }
-
-  void _openShareCardDialog(Activity activity, List<TrackPoint> trackPoints) {
+  void _openShareCardDialog(Activity activity, List<TrackPoint> trackPoints, Shoe? shoe) {
     ShareActivityModal.show(
       context: context,
       activity: activity,
       trackPoints: trackPoints,
+      shoe: shoe,
     );
   }
 }

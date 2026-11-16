@@ -37,6 +37,7 @@ class TrackingState {
   final bool isAutoPaused;
   final int? activeShoeId;
   final DateTime? startTime;
+  final double gpsAccuracy;
 
   const TrackingState({
     this.status = TrackingStatus.idle,
@@ -59,6 +60,7 @@ class TrackingState {
     this.isAutoPaused = false,
     this.activeShoeId,
     this.startTime,
+    this.gpsAccuracy = 0.0,
   });
 
   bool get isActive => status == TrackingStatus.running || status == TrackingStatus.paused;
@@ -88,6 +90,7 @@ class TrackingState {
     bool? isAutoPaused,
     drift.Value<int?>? activeShoeId,
     DateTime? startTime,
+    double? gpsAccuracy,
   }) {
     return TrackingState(
       status: status ?? this.status,
@@ -111,6 +114,7 @@ class TrackingState {
       isAutoPaused: isAutoPaused ?? this.isAutoPaused,
       activeShoeId: activeShoeId != null ? activeShoeId.value : this.activeShoeId,
       startTime: startTime ?? this.startTime,
+      gpsAccuracy: gpsAccuracy ?? this.gpsAccuracy,
     );
   }
 }

@@ -32,7 +32,16 @@ class TrackerNotifier extends StateNotifier<TrackingState> {
   double _lastSplitAltitude = 0.0;
   bool _pendingResumePoint = false;
 
-  TrackerNotifier(this._db) : super(const TrackingState());
+  TrackerNotifier(this._db) : super(const TrackingState()) {
+    _initDefaultShoe();
+  }
+
+  Future<void> _initDefaultShoe() async {
+    final defaultShoe = await _db.getDefaultShoe();
+    if (defaultShoe != null) {
+      state = state.copyWith(activeShoeId: drift.Value(defaultShoe.id));
+    }
+  }
 
   void setShoe(int? shoeId) {
     state = state.copyWith(activeShoeId: drift.Value(shoeId));
@@ -114,29 +123,36 @@ class TrackerNotifier extends StateNotifier<TrackingState> {
     } catch (_) {}
 
     final now = DateTime.now();
+    final initialPos = state.currentPosition;
+    final initialAlt = state.currentAltitude;
+    final initialAcc = state.gpsAccuracy;
+
     state = TrackingState(
       status: TrackingStatus.running,
       activityType: state.activityType,
       startTime: now,
       autoPauseEnabled: state.autoPauseEnabled,
       activeShoeId: state.activeShoeId,
+      currentPosition: initialPos,
+      currentAltitude: initialAlt,
+      gpsAccuracy: initialAcc,
     );
 
     // Start second-by-second timer
     _startTimer();
 
-    // Start high-precision location updates adapted for Android
+    // Start high-precision location updates adapted for real-time tracking
     late final LocationSettings locationSettings;
     if (defaultTargetPlatform == TargetPlatform.android) {
       locationSettings = AndroidSettings(
-        accuracy: LocationAccuracy.best,
-        distanceFilter: 1, // 1 meter filter so every movement registers
+        accuracy: LocationAccuracy.bestForNavigation,
+        distanceFilter: 0, // 0 meter filter for instantaneous real-time position updates
         intervalDuration: const Duration(seconds: 1), // 1 second updates
       );
     } else {
       locationSettings = const LocationSettings(
-        accuracy: LocationAccuracy.best,
-        distanceFilter: 1,
+        accuracy: LocationAccuracy.bestForNavigation,
+        distanceFilter: 0,
       );
     }
 
@@ -183,6 +199,16 @@ class TrackerNotifier extends StateNotifier<TrackingState> {
     if (state.status != TrackingStatus.running) return;
 
     final currentLatLng = LatLng(position.latitude, position.longitude);
+
+    // Reject wild GPS spikes (> 45m accuracy error)
+    if (position.accuracy > 45.0) return;
+
+    // Always update current position and accuracy in real-time so marker and camera follow smoothly
+    state = state.copyWith(
+      currentPosition: drift.Value(currentLatLng),
+      currentAltitude: position.altitude,
+      gpsAccuracy: position.accuracy,
+    );
 
     // Apply GPS drift filter
     final bool isValid = _driftFilter.isValidPoint(position);
@@ -390,7 +416,8 @@ class TrackerNotifier extends StateNotifier<TrackingState> {
     _timer?.cancel();
     _positionSubscription?.cancel();
     _standbySubscription?.cancel();
-    state = const TrackingState();
+    final currentShoeId = state.activeShoeId;
+    state = TrackingState(activeShoeId: currentShoeId);
     startStandbyLocation();
   }
 

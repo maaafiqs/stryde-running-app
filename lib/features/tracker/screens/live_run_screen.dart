@@ -5,11 +5,13 @@ import 'package:latlong2/latlong.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/database/database_provider.dart';
+import '../../../core/database/stryde_database.dart';
 import '../../../core/models/split_pace.dart';
 import '../../../core/services/location_permission_service.dart';
 import '../../../core/services/run_metrics_calculator.dart';
 import '../../../core/theme/stryde_colors.dart';
 import '../../../core/theme/stryde_typography.dart';
+import '../../gear/screens/gear_screen.dart';
 import '../../history/screens/activity_detail_screen.dart';
 import '../../history/widgets/split_pace_table.dart';
 import '../models/tracking_state.dart';
@@ -228,7 +230,10 @@ class _LiveRunScreenState extends ConsumerState<LiveRunScreen> {
     // Keep map centered on user when active
     if (_followRunner && trackingState.currentPosition != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _mapController.move(trackingState.currentPosition!, _mapController.camera.zoom);
+        if (!mounted) return;
+        try {
+          _mapController.move(trackingState.currentPosition!, _mapController.camera.zoom);
+        } catch (_) {}
       });
     }
 
@@ -334,7 +339,9 @@ class _LiveRunScreenState extends ConsumerState<LiveRunScreen> {
                           const SizedBox(width: 5),
                           Text(
                             _permissionStatus == LocationPermissionStatus.granted
-                                ? 'GPS AKTIF'
+                                ? (trackingState.gpsAccuracy > 0
+                                    ? 'GPS (±${trackingState.gpsAccuracy.toStringAsFixed(0)}m)'
+                                    : 'GPS AKTIF')
                                 : 'IZIN GPS',
                             style: TextStyle(
                               fontSize: 10,
@@ -586,6 +593,30 @@ class _LiveRunScreenState extends ConsumerState<LiveRunScreen> {
             ],
           ),
 
+        // Real-time GPS Accuracy Circle
+        if (trackingState.currentPosition != null)
+          CircleLayer(
+            circles: [
+              CircleMarker(
+                point: trackingState.currentPosition!,
+                radius: (trackingState.gpsAccuracy > 0
+                        ? trackingState.gpsAccuracy
+                        : 15.0)
+                    .clamp(5.0, 50.0),
+                useRadiusInMeter: true,
+                color: (trackingState.isWalking
+                        ? const Color(0xFF00E5FF)
+                        : StrydeColors.neonGreen)
+                    .withValues(alpha: 0.12),
+                borderColor: (trackingState.isWalking
+                        ? const Color(0xFF00E5FF)
+                        : StrydeColors.neonGreen)
+                    .withValues(alpha: 0.45),
+                borderStrokeWidth: 1.5,
+              ),
+            ],
+          ),
+
         // Runner Current Position Marker (Leaflet Pulsing Marker)
         if (trackingState.currentPosition != null)
           MarkerLayer(
@@ -796,7 +827,7 @@ class _LiveRunScreenState extends ConsumerState<LiveRunScreen> {
     BuildContext context,
     TrackingState state,
     TrackerNotifier notifier,
-    AsyncValue<List<dynamic>> shoesAsync,
+    AsyncValue<List<Shoe>> shoesAsync,
   ) {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
@@ -834,7 +865,12 @@ class _LiveRunScreenState extends ConsumerState<LiveRunScreen> {
           // Activity Mode Selector (Lari vs Jalan Santai)
           if (state.status == TrackingStatus.idle) ...[
             _buildActivitySelector(state, notifier),
+            const SizedBox(height: 10),
+            _buildShoeSelector(context, state, notifier, shoesAsync),
             const SizedBox(height: 14),
+          ] else ...[
+            _buildActiveShoeIndicator(state, shoesAsync),
+            const SizedBox(height: 10),
           ],
 
           // Primary Huge Metric (DISTANCE)
@@ -1123,6 +1159,313 @@ class _LiveRunScreenState extends ConsumerState<LiveRunScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildShoeSelector(
+    BuildContext context,
+    TrackingState state,
+    TrackerNotifier notifier,
+    AsyncValue<List<Shoe>> shoesAsync,
+  ) {
+    return shoesAsync.when(
+      data: (shoes) {
+        Shoe? activeShoe;
+        if (state.activeShoeId != null) {
+          activeShoe = shoes.where((s) => s.id == state.activeShoeId).firstOrNull;
+        }
+        activeShoe ??= shoes.where((s) => s.isDefault).firstOrNull ?? shoes.firstOrNull;
+
+        final shoeLabel = activeShoe != null
+            ? '${activeShoe.brand} ${activeShoe.model} (${activeShoe.totalDistanceKm.toStringAsFixed(1)} km)'
+            : 'Belum ada sepatu (Ketuk untuk pilih / tambah)';
+
+        return GestureDetector(
+          onTap: () => _openShoePickerModal(context, state, notifier, shoes),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: StrydeColors.surfaceCard,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: activeShoe != null
+                    ? StrydeColors.neonGreen.withValues(alpha: 0.35)
+                    : StrydeColors.border,
+              ),
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  LucideIcons.footprints,
+                  size: 16,
+                  color: StrydeColors.neonGreen,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        'SEPATU DIGUNAKAN',
+                        style: TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 1.0,
+                          color: StrydeColors.textMuted,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        shoeLabel,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: StrydeColors.textPrimary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(
+                  LucideIcons.chevronsUpDown,
+                  size: 16,
+                  color: StrydeColors.textSecondary,
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+      loading: () => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
+    );
+  }
+
+  Widget _buildActiveShoeIndicator(
+    TrackingState state,
+    AsyncValue<List<Shoe>> shoesAsync,
+  ) {
+    if (state.activeShoeId == null) return const SizedBox.shrink();
+
+    return shoesAsync.maybeWhen(
+      data: (shoes) {
+        final activeShoe = shoes.where((s) => s.id == state.activeShoeId).firstOrNull;
+        if (activeShoe == null) return const SizedBox.shrink();
+
+        return Center(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            decoration: BoxDecoration(
+              color: StrydeColors.surfaceElevated.withValues(alpha: 0.8),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: StrydeColors.border),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(LucideIcons.footprints, size: 12, color: StrydeColors.neonGreen),
+                const SizedBox(width: 6),
+                Text(
+                  '👟 ${activeShoe.brand} ${activeShoe.model}',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: StrydeColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+      orElse: () => const SizedBox.shrink(),
+    );
+  }
+
+  void _openShoePickerModal(
+    BuildContext context,
+    TrackingState state,
+    TrackerNotifier notifier,
+    List<Shoe> shoes,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) {
+        return Container(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+          decoration: const BoxDecoration(
+            color: StrydeColors.surfaceCard,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            border: Border(top: BorderSide(color: StrydeColors.border, width: 1.5)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: StrydeColors.border,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'PILIH SEPATU TRACKING',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                  TextButton.icon(
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const GearScreen()),
+                      );
+                    },
+                    icon: const Icon(LucideIcons.plus, size: 14, color: StrydeColors.neonGreen),
+                    label: const Text(
+                      'Kelola Gear',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: StrydeColors.neonGreen,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              if (shoes.isEmpty) ...[
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 24),
+                  child: Column(
+                    children: [
+                      const Icon(LucideIcons.footprints, size: 40, color: StrydeColors.textMuted),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Belum ada sepatu tersimpan',
+                        style: TextStyle(color: StrydeColors.textSecondary),
+                      ),
+                      const SizedBox(height: 12),
+                      ElevatedButton(
+                        onPressed: () {
+                          Navigator.pop(ctx);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const GearScreen()),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: StrydeColors.neonGreen,
+                          foregroundColor: StrydeColors.textOnNeon,
+                        ),
+                        child: const Text('TAMBAH SEPATU BARU'),
+                      ),
+                    ],
+                  ),
+                ),
+              ] else ...[
+                ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.of(context).size.height * 0.45,
+                  ),
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: shoes.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: 8),
+                    itemBuilder: (context, idx) {
+                      final shoe = shoes[idx];
+                      final isSelected = state.activeShoeId == shoe.id ||
+                          (state.activeShoeId == null && shoe.isDefault);
+
+                      return InkWell(
+                        onTap: () {
+                          notifier.setShoe(shoe.id);
+                          Navigator.pop(ctx);
+                        },
+                        borderRadius: BorderRadius.circular(14),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? StrydeColors.neonGreen.withValues(alpha: 0.12)
+                                : StrydeColors.surfaceElevated,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: isSelected
+                                  ? StrydeColors.neonGreen
+                                  : StrydeColors.border,
+                              width: isSelected ? 1.5 : 1.0,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                LucideIcons.footprints,
+                                size: 20,
+                                color: isSelected
+                                    ? StrydeColors.neonGreen
+                                    : StrydeColors.textSecondary,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      '${shoe.brand} ${shoe.model}',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w800,
+                                        color: isSelected
+                                            ? StrydeColors.neonGreen
+                                            : StrydeColors.textPrimary,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      '${shoe.totalDistanceKm.toStringAsFixed(1)} / ${shoe.maxDistanceKm.toStringAsFixed(0)} km • ${(shoe.nickname != null && shoe.nickname!.isNotEmpty) ? shoe.nickname! : "Utama"}',
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        color: StrydeColors.textSecondary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              if (isSelected)
+                                const Icon(
+                                  LucideIcons.checkCircle2,
+                                  size: 18,
+                                  color: StrydeColors.neonGreen,
+                                ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
     );
   }
 
