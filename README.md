@@ -9,7 +9,8 @@ Developed by **Maaafiqs Dev**.
 ## 📲 Download & Install APK
 
 Download the latest pre-compiled release APK directly to your Android device:
-- 📦 **[Download Stryde v1.0.0 Release APK (apk/stryde-v1.0.0-release.apk)](apk/stryde-v1.0.0-release.apk)** *(Android 8.0+ / arm64-v8a, armeabi-v7a, x86_64)*
+- 📦 **[Download Stryde v1.0.0 Release APK (Direct)](https://github.com/maaafiqs/stryde-running-app/releases/download/v1.0.0/stryde-v1.0.0-release.apk)** *(Android 8.0+ / arm64-v8a, armeabi-v7a, x86_64)*
+- 🏷️ **[View GitHub Release v1.0.0](https://github.com/maaafiqs/stryde-running-app/releases/tag/v1.0.0)**
 
 ---
 
