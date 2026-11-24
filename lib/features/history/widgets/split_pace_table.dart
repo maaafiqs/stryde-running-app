@@ -170,7 +170,7 @@ class _SplitPaceTableState extends State<SplitPaceTable> {
           Row(
             children: [
               const SizedBox(
-                width: 44,
+                width: 54,
                 child: Text('KM', style: StrydeTypography.caption),
               ),
               Expanded(
@@ -220,27 +220,31 @@ class _SplitPaceTableState extends State<SplitPaceTable> {
                 children: [
                   // KM index / label
                   SizedBox(
-                    width: 44,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          split.displayLabel,
-                          style: StrydeTypography.metricSmall.copyWith(
-                            fontSize: split.isPartial ? 11 : 13,
-                            color: isFastest
-                                ? _themeColor
-                                : StrydeColors.textPrimary,
-                            fontWeight: isFastest
-                                ? FontWeight.w900
-                                : FontWeight.w700,
+                    width: 54,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            split.displayLabel,
+                            style: StrydeTypography.metricSmall.copyWith(
+                              fontSize: split.isPartial ? 11 : 13,
+                              color: isFastest
+                                  ? _themeColor
+                                  : StrydeColors.textPrimary,
+                              fontWeight: isFastest
+                                  ? FontWeight.w900
+                                  : FontWeight.w700,
+                            ),
                           ),
-                        ),
-                        if (isFastest) ...[
-                          const SizedBox(width: 2),
-                          Icon(LucideIcons.zap, size: 10, color: _themeColor),
+                          if (isFastest) ...[
+                            const SizedBox(width: 2),
+                            Icon(LucideIcons.zap, size: 10, color: _themeColor),
+                          ],
                         ],
-                      ],
+                      ),
                     ),
                   ),
 
