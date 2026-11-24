@@ -1,6 +1,15 @@
 # ⚡ Stryde — Offline-First Running Tracker
 
-**Stryde** is a high-performance, athletic, offline-first mobile running tracker built with Flutter and Dart using Clean Architecture (Feature-First). Designed with a high-contrast Dark Mode aesthetic, electric neon accents, and tabular typography for rock-solid in-run readability.
+**Stryde** is a high-performance, athletic, offline-first mobile running & walking tracker built with Flutter and Dart using Clean Architecture (Feature-First). Designed with a high-contrast athletic aesthetic, electric neon accents, and tabular typography for rock-solid in-run readability.
+
+Developed by **Maaafiqs Dev**.
+
+---
+
+## 📲 Download & Install APK
+
+Download the latest pre-compiled release APK directly to your Android device:
+- 📦 **[Download Stryde v1.0.0 Release APK (apk/stryde-v1.0.0-release.apk)](apk/stryde-v1.0.0-release.apk)** *(Android 8.0+ / arm64-v8a, armeabi-v7a, x86_64)*
 
 ---
 
@@ -37,16 +46,21 @@
 5. **Detailed Activity Breakdown:**
    - Interactive zoomable route map with Start & Finish markers.
    - Interactive Elevation & Speed Profile curves powered by `fl_chart`.
-   - 1.0 km Split Pace breakdown table with relative performance progress bars.
-   - **GPX Export:** Export `.gpx` files to easily import runs into Strava, Garmin Connect, or other fitness platforms.
-   - **Shareable Activity Card:** Instant high-res PNG image generator with normalized vector route and athletic telemetry for social media sharing.
+   - 1.0 km Split Pace breakdown table with overflow-proof responsive layout and relative performance progress bars.
+   - **Shareable Activity Card (Strava-Style):** Instant high-res PNG image generator with optional vector route and transparent sticker mode for social media sharing.
+   - **Interactive Shoe Breakdown:** Detailed mileage tracking per session, lifespan progress bar, and ability to link/switch shoes retroactively.
 
 6. **Gear Mileage Tracker:**
    - Tracks the lifespan of your running shoes.
-   - Automatically increments assigned shoe mileage after each finished run.
+   - Automatically increments assigned shoe mileage after each finished run or walk.
    - Visual progress bar warning when approaching the default 700 km retirement threshold.
 
-7. **Analytics & 60-Day Consistency Heatmap:**
+7. **Modes, Themes & Settings:**
+   - **Dual Activity Modes:** Run (Lari) and Casual Walk (Jalan Santai) with customized pace, speed, and step metrics.
+   - **Theme Engine:** Dark Mode (OLED-optimized), Light Mode (high daylight contrast), and System theme support.
+   - **Settings Screen:** Integrated settings hub with developer attribution (*developed by Maaafiqs Dev*).
+
+8. **Analytics & 60-Day Consistency Heatmap:**
    - Lifetime distance, total activities, and average pace summaries.
    - Weekly volume bar chart (Monday to Sunday).
    - 60-day running consistency calendar heatmap.
