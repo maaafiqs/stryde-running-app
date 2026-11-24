@@ -142,6 +142,37 @@ class StrydeDatabase extends _$StrydeDatabase {
     }
   }
 
+  Future<void> assignShoeToActivity(int activityId, int? newShoeId) async {
+    final activity = await getActivityById(activityId);
+    if (activity == null) return;
+    final oldShoeId = activity.shoeId;
+    if (oldShoeId == newShoeId) return;
+
+    await transaction(() async {
+      // 1. Subtract distance from old shoe if any
+      if (oldShoeId != null) {
+        final oldShoe = await getShoeById(oldShoeId);
+        if (oldShoe != null) {
+          final newDist = (oldShoe.totalDistanceKm - activity.distanceKm).clamp(0.0, double.infinity);
+          await (update(shoes)..where((t) => t.id.equals(oldShoeId)))
+              .write(ShoesCompanion(totalDistanceKm: Value(newDist)));
+        }
+      }
+      // 2. Add distance to new shoe if any
+      if (newShoeId != null) {
+        final newShoe = await getShoeById(newShoeId);
+        if (newShoe != null) {
+          final newDist = newShoe.totalDistanceKm + activity.distanceKm;
+          await (update(shoes)..where((t) => t.id.equals(newShoeId)))
+              .write(ShoesCompanion(totalDistanceKm: Value(newDist)));
+        }
+      }
+      // 3. Update activity's shoeId
+      await (update(activities)..where((t) => t.id.equals(activityId)))
+          .write(ActivitiesCompanion(shoeId: Value(newShoeId)));
+    });
+  }
+
   Future<int> deleteShoe(int id) {
     return (delete(shoes)..where((t) => t.id.equals(id))).go();
   }
