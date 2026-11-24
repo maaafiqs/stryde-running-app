@@ -33,14 +33,13 @@ class SplitPace {
   /// Formatted speed string like "5.4 km/h"
   String get formattedSpeed => '${speedKmh.toStringAsFixed(1)} km/h';
 
-  /// Label for split table, e.g. "1" or "4 (400m)" or "< 1 KM (50m)"
+  /// Label for split table, e.g. "1" or "4*" or "< 1 KM"
   String get displayLabel {
     if (isPartial) {
-      final int meters = (distanceKm * 1000).round();
       if (km <= 1 && distanceKm < 1.0) {
-        return '< 1 KM (${meters}m)';
+        return '< 1 KM';
       }
-      return '$km (${meters}m)';
+      return '$km*';
     }
     return '$km';
   }
